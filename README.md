@@ -72,6 +72,8 @@ python3 ik_test.py
 6. 軌道サマリーを表形式で出力
 7. **GIFアニメーション** を生成し `~/robot/trajectory_animation.gif` に保存
 
+![Trajectory Animation](trajectory_animation.gif)
+
 **GIFアニメーション内容:**
 | マーカー | 意味 |
 |---------|------|
