@@ -384,11 +384,31 @@ def create_animation(trajectory, init_joints, goal_joints):
     # 全フレームのセグメントデータを事前計算
     all_frames = []
     ee_trail = []
+    all_kinematics = []
     for wp in trajectory:
         segs = compute_fk(wp['joints'])
         ee = wp['ee']
         ee_trail.append(ee.copy())
         all_frames.append(segs)
+
+        # FK詳細を計算して保存
+        kin_data = []
+        r, p, y = ARM_L1_RPY
+        R0 = rot_z(y) @ rot_y(p) @ rot_x(r)
+        T = make_tf(R0, ARM_L1_ORIGIN)
+        joint_idx = 0
+        for seg in range(NUM_GIMBALS):
+            T = T @ make_tf(np.eye(3), np.array([0, 0, ARM_CYL_LENGTH]))
+            roll  = wp['joints'][joint_idx]
+            pitch = wp['joints'][joint_idx + 1]
+            yaw   = wp['joints'][joint_idx + 2]
+            joint_idx += 3
+            R_gimbal = rot_z(yaw) @ rot_y(pitch) @ rot_x(roll)
+            T = T @ make_tf(R_gimbal, np.zeros(3))
+            R_current = T[:3, :3]
+            q = rot2quat(R_current)
+            kin_data.append((R_current, q))
+        all_kinematics.append(kin_data)
 
     # 描画範囲を決定
     all_pts = []
@@ -411,7 +431,7 @@ def create_animation(trajectory, init_joints, goal_joints):
     TEXT_COLOR  = '#e0e0e0'
     GRID_COLOR  = '#2a2a4a'
 
-    fig, (ax_top, ax_side) = plt.subplots(1, 2, figsize=(14, 7), facecolor=BG_COLOR)
+    fig, (ax_top, ax_side, ax_text) = plt.subplots(1, 3, figsize=(21, 7), facecolor=BG_COLOR)
 
     def draw_frame(frame_idx):
         for ax in (ax_top, ax_side):
@@ -503,6 +523,28 @@ def create_animation(trajectory, init_joints, goal_joints):
                         color=TRAIL_COLOR, linewidth=1.5, alpha=0.6, linestyle='--')
             ax_side.plot(trail[:, 1], trail[:, 2],
                          color=TRAIL_COLOR, linewidth=1.5, alpha=0.6, linestyle='--')
+
+        # --- テキスト情報パネル (FKの姿勢情報) ---
+        ax_text.cla()
+        ax_text.set_facecolor(BG_COLOR)
+        ax_text.axis('off')
+
+        y_pos = 0.98
+        ax_text.text(0.05, y_pos, "Absolute Orientations (FK)", color=TRAIL_COLOR, 
+                     fontsize=12, fontweight='bold', transform=ax_text.transAxes, verticalalignment='top')
+        y_pos -= 0.08
+
+        kin_data = all_kinematics[frame_idx]
+        for seg, (R, q) in enumerate(kin_data):
+            text_str = f"Gimbal {seg+1} (arm_L1_g{seg+1}):\n"
+            text_str += f"  q: [x={q[0]:+5.2f}, y={q[1]:+5.2f}, z={q[2]:+5.2f}, w={q[3]:+5.2f}]\n"
+            text_str +=  "  R:\n"
+            text_str += f"     [{R[0,0]:+5.2f}, {R[0,1]:+5.2f}, {R[0,2]:+5.2f}]\n"
+            text_str += f"     [{R[1,0]:+5.2f}, {R[1,1]:+5.2f}, {R[1,2]:+5.2f}]\n"
+            text_str += f"     [{R[2,0]:+5.2f}, {R[2,1]:+5.2f}, {R[2,2]:+5.2f}]"
+            ax_text.text(0.05, y_pos, text_str, color=TEXT_COLOR, 
+                         family='monospace', fontsize=10, transform=ax_text.transAxes, verticalalignment='top')
+            y_pos -= 0.18
 
         # Title
         pct = frame_idx / max(len(all_frames) - 1, 1) * 100
