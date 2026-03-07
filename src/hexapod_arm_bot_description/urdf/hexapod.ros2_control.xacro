@@ -1,0 +1,61 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="gimbal_ros2_control" params="prefix">
+    <joint name="${prefix}_roll_joint">
+      <command_interface name="position"/>
+      <state_interface name="position">
+        <param name="initial_value">0.0</param>
+      </state_interface>
+      <state_interface name="velocity"/>
+    </joint>
+    <joint name="${prefix}_pitch_joint">
+      <command_interface name="position"/>
+      <state_interface name="position">
+        <param name="initial_value">0.0</param>
+      </state_interface>
+      <state_interface name="velocity"/>
+    </joint>
+    <joint name="${prefix}_yaw_joint">
+      <command_interface name="position"/>
+      <state_interface name="position">
+        <param name="initial_value">0.0</param>
+      </state_interface>
+      <state_interface name="velocity"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:macro name="arm_ros2_control" params="prefix">
+    <xacro:gimbal_ros2_control prefix="${prefix}_g1"/>
+    <xacro:gimbal_ros2_control prefix="${prefix}_g2"/>
+    <xacro:gimbal_ros2_control prefix="${prefix}_g3"/>
+    <xacro:gimbal_ros2_control prefix="${prefix}_g4"/>
+    <xacro:gimbal_ros2_control prefix="${prefix}_g5"/>
+  </xacro:macro>
+
+  <xacro:macro name="hexapod_ros2_control" params="name">
+    <ros2_control name="${name}" type="system">
+      <hardware>
+        <plugin>ign_ros2_control/IgnitionSystem</plugin>
+      </hardware>
+      
+      <!-- Left Arms -->
+      <xacro:arm_ros2_control prefix="arm_L1"/>
+      <xacro:arm_ros2_control prefix="arm_L2"/>
+      <xacro:arm_ros2_control prefix="arm_L3"/>
+      
+      <!-- Right Arms -->
+      <xacro:arm_ros2_control prefix="arm_R1"/>
+      <xacro:arm_ros2_control prefix="arm_R2"/>
+      <xacro:arm_ros2_control prefix="arm_R3"/>
+      
+    </ros2_control>
+
+    <gazebo>
+      <plugin filename="ign_ros2_control-system" name="ign_ros2_control::IgnitionROS2ControlPlugin">
+        <parameters>$(find hexapod_arm_bot_gazebo)/config/ros2_controllers.yaml</parameters>
+      </plugin>
+    </gazebo>
+  </xacro:macro>
+
+</robot>

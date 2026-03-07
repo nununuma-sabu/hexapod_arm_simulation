@@ -1,0 +1,50 @@
+planning_plugin: ompl_interface/OMPLPlanner
+request_adapters: >-
+  default_planner_request_adapters/AddTimeOptimalParameterization
+  default_planner_request_adapters/ResolveConstraintFrames
+  default_planner_request_adapters/FixWorkspaceBounds
+  default_planner_request_adapters/FixStartStateBounds
+  default_planner_request_adapters/FixStartStateCollision
+  default_planner_request_adapters/FixStartStatePathConstraints
+start_state_max_bounds_error: 0.1
+planner_configs:
+  RRTConnect:
+    type: geometric::RRTConnect
+    range: 0.0
+  RRT:
+    type: geometric::RRT
+    range: 0.0
+    goal_bias: 0.05
+  PRM:
+    type: geometric::PRM
+    max_nearest_neighbors: 10
+arm_L1:
+  default_planner_config: RRTConnect
+  planner_configs:
+    - RRTConnect
+    - RRT
+    - PRM
+arm_L2:
+  default_planner_config: RRTConnect
+  planner_configs:
+    - RRTConnect
+arm_L3:
+  default_planner_config: RRTConnect
+  planner_configs:
+    - RRTConnect
+arm_R1:
+  default_planner_config: RRTConnect
+  planner_configs:
+    - RRTConnect
+arm_R2:
+  default_planner_config: RRTConnect
+  planner_configs:
+    - RRTConnect
+arm_R3:
+  default_planner_config: RRTConnect
+  planner_configs:
+    - RRTConnect
+all_arms:
+  default_planner_config: RRTConnect
+  planner_configs:
+    - RRTConnect

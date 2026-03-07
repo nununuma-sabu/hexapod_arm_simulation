@@ -1,0 +1,21 @@
+# ROS 2 workspaces
+build/
+install/
+log/
+
+# IDEs
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Gazebo / URDF generated files
+*.sdf
+
+# Media
+*.gif
+*.mp4
+*.png

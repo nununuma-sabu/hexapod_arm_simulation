@@ -1,0 +1,47 @@
+joint_limits:
+  # Left Arms
+  arm_L1_g1_roll_joint:
+    has_velocity_limits: false
+    has_acceleration_limits: false
+  arm_L1_g1_pitch_joint:
+    has_velocity_limits: false
+    has_acceleration_limits: false
+  arm_L1_g1_yaw_joint:
+    has_velocity_limits: false
+    has_acceleration_limits: false
+  arm_L1_g2_roll_joint:
+    has_velocity_limits: false
+    has_acceleration_limits: false
+  arm_L1_g2_pitch_joint:
+    has_velocity_limits: false
+    has_acceleration_limits: false
+  arm_L1_g2_yaw_joint:
+    has_velocity_limits: false
+    has_acceleration_limits: false
+  arm_L1_g3_roll_joint:
+    has_velocity_limits: false
+    has_acceleration_limits: false
+  arm_L1_g3_pitch_joint:
+    has_velocity_limits: false
+    has_acceleration_limits: false
+  arm_L1_g3_yaw_joint:
+    has_velocity_limits: false
+    has_acceleration_limits: false
+  arm_L1_g4_roll_joint:
+    has_velocity_limits: false
+    has_acceleration_limits: false
+  arm_L1_g4_pitch_joint:
+    has_velocity_limits: false
+    has_acceleration_limits: false
+  arm_L1_g4_yaw_joint:
+    has_velocity_limits: false
+    has_acceleration_limits: false
+  arm_L1_g5_roll_joint:
+    has_velocity_limits: false
+    has_acceleration_limits: false
+  arm_L1_g5_pitch_joint:
+    has_velocity_limits: false
+    has_acceleration_limits: false
+  arm_L1_g5_yaw_joint:
+    has_velocity_limits: false
+    has_acceleration_limits: false
