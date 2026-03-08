@@ -214,7 +214,7 @@ with open(ik_result_file, "w") as f:
         f.write("\n")
 
 output_gif = "ik_animation.gif"
-with imageio.get_writer(output_gif, mode='I', duration=0.5) as writer:
+with imageio.get_writer(output_gif, mode='I', duration=0.5, loop=0) as writer:
     for img_path in temp_images:
         image = imageio.imread(img_path)
         writer.append_data(image)
