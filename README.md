@@ -88,11 +88,35 @@ python3 ik_test.py
 
 ---
 
+### 5. 逆運動学 (IK) デモンストレーション
+`test_ikpy.py` は `ikpy` ライブラリを使用して、目標座標から関節角度を逆算するデモンストレーションを行います。
+
+```bash
+cd ~/robot
+python3 test_ikpy.py
+```
+
+**処理内容:**
+1. **ライブラリ**: `ikpy` (Levenberg-Marquardt 法による数値解法)
+2. **初期状態**: 全関節 0 rad の「真っ直ぐな姿勢」をシードとして使用
+3. **目標生成**: 各関節に大きなランダムノイズ（±1.2 rad）を加え、到達可能な 3D 目標位置を生成
+4. **IK ソルブ**: 目標位置 (`x, y, z`) に対し、エンドエフェクタが到達するための全関節角度を逆算
+5. **2画面表示 GIF**: 上面図 (X-Y) と側面図 (X-Z) を並べ、3D 的な動きと姿勢数値（回転行列・クォータニオン）を可視化
+6. **結果保存**: `ik_results.txt` に全ステップの詳細な座標・姿勢データを書き出し
+
+![IK Animation](ik_animation.gif)
+
+**出力ファイル:**
+- `ik_animation.gif`: 2画面表示による動作アニメーション（0.5秒/フレーム）
+- `ik_results.txt`: 初期・目標位置、および軌道上の各ステップにおける回転行列とクォータニオンの記録
+
+---
+
 ## 今後の拡張予定
 
 - [ ] 全6アーム（`arm_L1` 〜 `arm_L3`, `arm_R1` 〜 `arm_R3`）への対応
 - [ ] 複数アーム同時制御時のアーム間干渉チェック
-- [ ] 逆運動学 (IK) ソルバーの自前実装（MoveIt KDL に頼らない数値解法）
+- [x] 逆運動学 (IK) ソルバーの実装（ikpy を活用した数値解法デモ）
 - [ ] Gazebo 上でのリアルタイム軌道再生
 - [ ] ジンバルロック検出・警告機能
 
@@ -102,8 +126,11 @@ python3 ik_test.py
 ```
 ~/robot/
 ├── ik_test.py                          # 軌道計画テストスクリプト（純粋Python）
+├── test_ikpy.py                        # 逆運動学（IK）デモスクリプト
+├── ik_animation.gif                    # 生成されるIKアニメーション
+├── ik_results.txt                      # IK計算結果のテキストログ
 ├── setup.sh                            # 初期セットアップスクリプト
-├── trajectory_animation.gif            # 生成されるGIFアニメーション
+├── trajectory_animation.gif            # 生成される軌道計画GIF
 ├── src/
 │   ├── hexapod_arm_bot_description/    # URDF / xacro モデル定義
 │   ├── hexapod_arm_bot_gazebo/         # Gazebo Launch / コントローラ設定
