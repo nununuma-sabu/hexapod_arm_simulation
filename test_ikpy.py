@@ -132,63 +132,152 @@ for step in range(num_steps + 1):
         'angles': current_angles
     })
     
-    # Create two subplots: Top View (X-Y) and Side View (X-Z)
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 8))
-    joints = arm_chain.forward_kinematics(current_angles, full_kinematics=True)
-    xs = [j[0, 3] for j in joints]
-    ys = [j[1, 3] for j in joints]
-    zs = [j[2, 3] for j in joints]
-    
-    # --- Top View (X-Y) ---
-    body_top = plt.Circle((0, 0), 0.2, color='gray', alpha=0.3, label='Body (Top)')
-    ax1.add_patch(body_top)
-    ax1.plot(xs, ys, "-o", linewidth=3, markersize=8, color='blue', label='Arm L1')
-    ax1.plot(xs[0], ys[0], "ks", markersize=10)
-    ax1.plot(target_position[0], target_position[1], "r*", markersize=15, label='Target')
-    ax1.set_title(f"Top View (X-Y)\nStep {step}/{num_steps}")
-    ax1.set_xlabel("X (meters)")
-    ax1.set_ylabel("Y (meters)")
-    ax1.set_xlim(-2.5, 2.5)
-    ax1.set_ylim(-2.5, 2.5)
-    ax1.set_aspect('equal')
-    ax1.grid(True, linestyle='--', alpha=0.5)
-    ax1.legend(loc='upper right')
+    # --- Integrated 3D View (Manual Projection) ---
+    def project_3d(x, y, z):
+        # Simple Isometric-like projection
+        # u: horizontal axis, v: vertical axis
+        u = (y - x) * np.cos(np.radians(30))
+        v = z - (x + y) * np.sin(np.radians(30))
+        return u, v
 
-    # --- Side View (X-Z) ---
-    # Body in side view (cylinder side)
-    body_side = plt.Rectangle((-0.5, 0.5), 1.0, 0.4, color='gray', alpha=0.3, label='Body (Side)')
-    ax2.add_patch(body_side)
-    ax2.plot(xs, zs, "-o", linewidth=3, markersize=8, color='green', label='Arm L1')
-    ax2.plot(xs[0], zs[0], "ks", markersize=10)
-    ax2.plot(target_position[0], target_position[2], "r*", markersize=15, label='Target')
-    ax2.set_title(f"Side View (X-Z)\nStep {step}/{num_steps}")
-    ax2.set_xlabel("X (meters)")
-    ax2.set_ylabel("Z (meters)")
-    ax2.set_xlim(-2.5, 2.5)
-    ax2.set_ylim(-1.5, 3.5) # Z range might be different
-    ax2.set_aspect('equal')
-    ax2.grid(True, linestyle='--', alpha=0.5)
-    ax2.legend(loc='upper right')
+    # Calculate all joint positions
+    joints = arm_chain.forward_kinematics(current_angles, full_kinematics=True)
+    all_xs = [j[0, 3] for j in joints]
+    all_ys = [j[1, 3] for j in joints]
+    all_zs = [j[2, 3] for j in joints]
+
+    # --- Identify the Arm segments for plotting ---
+    arm_start_idx = 0
+    body_idx = 0
+    for i, link in enumerate(arm_chain.links):
+        if "body_link" in link.name:
+            body_idx = i
+        if "cyl1" in link.name:
+            arm_start_idx = i
+            break
+            
+    body_pos = joints[body_idx][:3, 3]
+    xs = all_xs[arm_start_idx:]
+    ys = all_ys[arm_start_idx:]
+    zs = all_zs[arm_start_idx:]
     
+    # Other arm base positions and rotations (based on URDF)
+    # Each arm starts by pointing outwards from the torso.
+    # L1: front-left, L2: mid-left, L3: back-left...
+    arms_config = [
+        {"name": "arm_L1", "xyz": [0.0, 0.2, -0.3], "is_active": True},
+        {"name": "arm_L2", "xyz": [0.0, 0.2, 0.0],  "is_active": False},
+        {"name": "arm_L3", "xyz": [0.0, 0.2, 0.3],  "is_active": False},
+        {"name": "arm_R1", "xyz": [0.0, -0.2, -0.3], "is_active": False},
+        {"name": "arm_R2", "xyz": [0.0, -0.2, 0.0],  "is_active": False},
+        {"name": "arm_R3", "xyz": [0.0, -0.2, 0.3],  "is_active": False},
+    ]
+    
+    # Create three subplots: Top, Side, and Integrated 3D
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18, 7))
+    
+    def plot_robot_scene(ax, view_type='3d'):
+        # World Axes (RGB: X=Red, Y=Green, Z=Blue)
+        scale = 0.4
+        if view_type == 'top':
+            ax.quiver(0, 0, scale, 0, color='red', angles='xy', scale_units='xy', scale=1, alpha=0.5) # X
+            ax.quiver(0, 0, 0, scale, color='green', angles='xy', scale_units='xy', scale=1, alpha=0.5) # Y
+        elif view_type == 'side':
+            ax.quiver(0, 0, scale, 0, color='red', angles='xy', scale_units='xy', scale=1, alpha=0.5) # X
+            ax.quiver(0, 0, 0, scale, color='blue', angles='xy', scale_units='xy', scale=1, alpha=0.5) # Z
+        elif view_type == '3d_iso':
+            ux, vx = project_3d(scale, 0, 0); uy, vy = project_3d(0, scale, 0); uz, vz = project_3d(0, 0, scale)
+            ax.plot([0, ux], [0, vx], color='red', linewidth=3, alpha=0.6)
+            ax.plot([0, uy], [0, vy], color='green', linewidth=3, alpha=0.6)
+            ax.plot([0, uz], [0, vz], color='blue', linewidth=3, alpha=0.6)
+
+        # Draw Body (Grey Cylinder)
+        if view_type == 'top':
+            rect = plt.Rectangle((body_pos[0]-0.5, body_pos[1]-0.2), 1.0, 0.4, color='gray', alpha=0.7)
+            ax.add_patch(rect)
+        elif view_type == 'side':
+            rect = plt.Rectangle((body_pos[0]-0.5, body_pos[2]-0.2), 1.0, 0.4, color='gray', alpha=0.7)
+            ax.add_patch(rect)
+        elif view_type == '3d_iso':
+            for bx in [body_pos[0]-0.5, body_pos[0]+0.5]:
+                phis = np.linspace(0, 2*np.pi, 20)
+                ub, vb = zip(*[project_3d(bx, body_pos[1]+0.2*np.cos(p), body_pos[2]+0.2*np.sin(p)) for p in phis])
+                ax.plot(ub, vb, color='gray', alpha=0.4, linewidth=1.5)
+            for ang in [0, np.pi/2, np.pi, 3*np.pi/2]:
+                ub1, vb1 = project_3d(body_pos[0]-0.5, body_pos[1]+0.2*np.cos(ang), body_pos[2]+0.2*np.sin(ang))
+                ub2, vb2 = project_3d(body_pos[0]+0.5, body_pos[1]+0.2*np.cos(ang), body_pos[2]+0.2*np.sin(ang))
+                ax.plot([ub1, ub2], [vb1, vb2], color='gray', alpha=0.4, linewidth=1.5)
+
+        # Plot All 6 Arms
+        for arm in arms_config:
+            if arm['is_active']:
+                # Active arm L1 (using current FK results)
+                la_xs, la_ys, la_zs = xs, ys, zs
+                alpha = 0.9
+            else:
+                # Other arms: draw as simple straight lines from their base to show hexapod shape
+                # base_joint orientation in URDF is +/- pi/2 around X
+                side = 1.0 if "L" in arm['name'] else -1.0
+                full_len = 1.5
+                b_x, b_y, b_z = body_pos[0]+arm['xyz'][0], body_pos[1]+arm['xyz'][1], body_pos[2]+arm['xyz'][2]
+                la_xs = [b_x, b_x]; la_ys = [b_y, b_y + side*full_len]; la_zs = [b_z, b_z]
+                alpha = 0.25 # Faded for inactive arms
+
+            if view_type == 'top':
+                ax.plot(la_xs, la_ys, color='red', linewidth=3, alpha=alpha)
+                ax.plot(la_xs, la_ys, "bo", markersize=3, alpha=alpha)
+                ax.plot(la_xs[0], la_ys[0], "ks", markersize=5, alpha=alpha)
+            elif view_type == 'side':
+                ax.plot(la_xs, la_zs, color='red', linewidth=3, alpha=alpha)
+                ax.plot(la_xs, la_zs, "bo", markersize=3, alpha=alpha)
+                ax.plot(la_xs[0], la_zs[0], "ks", markersize=5, alpha=alpha)
+            elif view_type == '3d_iso':
+                ua, va = zip(*[project_3d(x,y,z) for x,y,z in zip(la_xs, la_ys, la_zs)])
+                ax.plot(ua, va, color='red', linewidth=3, alpha=alpha)
+                ax.plot(ua, va, "bo", markersize=4, alpha=alpha)
+                ub, vb = project_3d(la_xs[0], la_ys[0], la_zs[0])
+                ax.plot(ub, vb, "ks", markersize=6, alpha=alpha)
+
+    # Render Scenes
+    plot_robot_scene(ax1, 'top')
+    ax1.plot(target_position[0], target_position[1], "r*", markersize=14, label='Target')
+    ax1.set_title("Top View (X-Y)")
+    ax1.set_xlim(-2.0, 2.0); ax1.set_ylim(-2.0, 2.0); ax1.set_aspect('equal'); ax1.grid(True, alpha=0.2)
+
+    plot_robot_scene(ax2, 'side')
+    ax2.axhline(0, color='brown', linewidth=1, alpha=0.3)
+    ax2.plot(target_position[0], target_position[2], "r*", markersize=14)
+    ax2.set_title("Side View (X-Z)")
+    ax2.set_xlim(-2.0, 2.0); ax2.set_ylim(-0.2, 2.0); ax2.set_aspect('equal'); ax2.grid(True, alpha=0.2)
+
+    plot_robot_scene(ax3, '3d_iso')
+    ut, vt = project_3d(target_position[0], target_position[1], target_position[2])
+    ax3.plot(ut, vt, "r*", markersize=16)
+    ax3.set_title(f"Integrated 3D (Isometric)\nStep {step}/{num_steps}")
+    ax3.set_xlim(-3.0, 3.0); ax3.set_ylim(-3.0, 3.0); ax3.set_aspect('equal'); ax3.axis('off')
+
+    # --- Data Overlay (Matrix/Quat) ---
+
     # --- Data Overlay (Matrix/Quat) ---
     rot_str = (f"Rotation Matrix:\n"
                f"[{curr_rot[0,0]:.2f}, {curr_rot[0,1]:.2f}, {curr_rot[0,2]:.2f}]\n"
                f"[{curr_rot[1,0]:.2f}, {curr_rot[1,1]:.2f}, {curr_rot[1,2]:.2f}]\n"
                f"[{curr_rot[2,0]:.2f}, {curr_rot[2,1]:.2f}, {curr_rot[2,2]:.2f}]")
     quat_str = f"Quat: [{curr_quat[0]:.2f}, {curr_quat[1]:.2f}, {curr_quat[2]:.2f}, {curr_quat[3]:.2f}]"
-    init_pos_str = f"Initial Pos: [{initial_position[0]:.2f}, {initial_position[1]:.2f}, {initial_position[2]:.2f}]"
-    targ_pos_str = f"Target Pos: [{target_position[0]:.2f}, {target_position[1]:.2f}, {target_position[2]:.2f}]"
+    pos_info = f"Init Pos: [{initial_position[0]:.2f}, {initial_position[1]:.2f}, {initial_position[2]:.2f}] | Targ Pos: [{target_position[0]:.2f}, {target_position[1]:.2f}, {target_position[2]:.2f}]"
 
-    # Overlay everything in the middle/background or a common area
-    plt.figtext(0.5, 0.02, f"{rot_str}    {quat_str}\n{init_pos_str}    {targ_pos_str}", 
-                ha='center', fontsize=9, bbox=dict(boxstyle='round', facecolor='white', alpha=0.9))
+    plt.figtext(0.5, 0.02, f"{rot_str}    {quat_str}\n{pos_info}", 
+                ha='center', fontsize=10, bbox=dict(boxstyle='round', facecolor='white', alpha=0.9))
+    
+    # Disclaimer
+    plt.figtext(0.98, 0.02, "*Illustrative purposes only", fontsize=9, ha='right', va='bottom', alpha=0.7)
 
-    plt.tight_layout(rect=[0, 0.1, 1, 1]) # Make room for the text at bottom
+    plt.tight_layout(rect=[0, 0.12, 1, 0.95]) 
     
     img_path = f"temp_frame_{step}.png"
     plt.savefig(img_path)
     plt.close(fig)
-    
+
     temp_images.append(img_path)
 
 # 5.5 Write Results to File
